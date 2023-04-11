@@ -6,8 +6,7 @@
 # ro_bits in page table
 # nx_bits in page table
 # --> specifies access permission for va
-# check physical access permission is same with page table's ro_bits, nx_bits
-# unsatisfiable
+# is_writable, is_executable set/unset ro, nx bits exclusively.
 
 from z3 import *
 
