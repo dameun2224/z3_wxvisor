@@ -10,9 +10,9 @@ https://github.com/Z3Prover/z3
 > shell> python paging.py
 - Checks the satisfiablity of the constraints in the theorem.
 theorem has 
-  1. basic address mapping va-to-pa in paging unit,
-  2. each va has access permission bit in the page table
-  3. matches physical access permission with the permission in the page table
+1. basic address mapping va-to-pa in paging unit,
+2. each va has access permission bit in the page table
+3. matches physical access permission with the permission in the page table
 
 ## 2. OS paging with alias
 - To run, 
