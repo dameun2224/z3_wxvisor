@@ -6,7 +6,7 @@ Assume you have Z3 python
 https://github.com/Z3Prover/z3
 
 1. basic OS paging with address mapping and access permission
-- python paging.py
+- To run, shell> python paging.py
 - Checks the satisfiablity of the constraints in the theorem.
 theorem has 
 1) basic address mapping va-to-pa in paging unit,
@@ -14,7 +14,7 @@ theorem has
 3) matches physical access permission with the permission in the page table
 
 2. OS paging with alias
-- python paging_alias.py
+- To run, shell> python paging.py
 - Checks the satisfiability of the constraints in the theorem
 theorem defines alias to va
 1) different virtual addresses (va1 != va2)
@@ -22,7 +22,7 @@ theorem defines alias to va
 3) matches physical access permission with the permission in the page table
 
 3. OS paging with WX memory
-- python paging_wx_memory.py
+- To run, shell> python paging.py
 - Checks the satisfiability of the constraints in the theorem
 theorem defines WX property
 1) defines ro_bits, nx_bits in the page table
@@ -31,7 +31,7 @@ theorem defines WX property
 3) checks when execute, nx is unset in the page table, and physically same access permission is granted
 
 4. WXvisor
-- python wxvisor.py
+- To run, shell> python paging.py
 - Checks the satisfiability of the constraints in the theorem
 theorem defines WXvisor WX property with aliases
 1) nested paging structure (mmu1: va->ipa, mmu2: ipa->pa)
