@@ -72,9 +72,9 @@ def alias_mapping():
     # Check for satisfiability
     retVal = solver.check()
     if retVal == sat:
-        print("satisfiable")
+        print("alias mapping satisfiable")
     else:
-        print("unsatisfiable")
+        print("alias mapping with different permission unsatisfiable")
         
     return retVal
 
@@ -91,8 +91,11 @@ def basic_mapping():
     # Check for satisfiability
     retVal = solver.check()
     if retVal == sat:
-        print("satisfiable")
+        print("basic mapping satisfiable")
     else:
-        print("unsatisfiable")
+        print("basic mapping unsatisfiable")
         
     return retVal
+
+basic_mapping()
+alias_mapping()
