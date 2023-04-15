@@ -51,28 +51,90 @@ constraint4 = (pa & 0xFFF) == 0
 
 # Constraint 3: mmu1 allows alias mapping, but mmu2 does not allow aliases
 constraint5 = Distinct(va, va1, va2)
-constraint6 = mmu1(va1) == ipa
-constraint7 = mmu1(va2) == ipa
-constraint8 = Implies( Distinct(ipa1, ipa2), Distinct(mmu2(ipa1), mmu2(ipa2)) )
+constraint6 = mmu1(va1) == ipa1
+constraint7 = mmu1(va2) == ipa2
+constraint8 = Implies( Distinct(ipa, ipa1), Distinct(mmu2(ipa), mmu2(ipa1)) )
 
 # Constant 9: least privilege principle
 # either va has RO bit in the mmu1 page table or RO bit in the mmu2 page table
-constraint9  = phy_ro(mmu2((mmu1(va)))) == Or (ro_bits(va), ro_bits2(mmu1(va)) )
-constraint10 = phy_nx(mmu2((mmu1(va)))) == Or (nx_bits(va), nx_bits2(mmu1(va)) )
+constraint9  = phy_ro(mmu2((mmu1(va)))) == Or (ro_bits(va), ro_bits2(mmu1(va)), ro_bits(va1), ro_bits2(mmu1(va)) )
+constraint10 = phy_nx(mmu2((mmu1(va)))) == Or (nx_bits(va), nx_bits2(mmu1(va)), nx_bits(va1), nx_bits2(mmu1(va1)) )
 
 # physical W^X property
 constraint_wx = Distinct(phy_ro(mmu2(mmu1(va))), phy_nx(mmu2(mmu1(va))))
 
 # Constraint 3: Virtual access permission (ro_bits) is set to physical access permission (phy_ro) when page is writable,
 # and unset when writing to virtual page
-constraint11 = Implies(write, And (ro_bits2(mmu1(va)) == phy_ro(mmu2(mmu1((va)))), (ro_bits2(mmu1(va)) == False)) )
+constraint11 = Implies(write, (ro_bits2(mmu1(va)) == False))
+constraint12 = Implies(write, (phy_ro(mmu2(mmu1((va)))) == False))
 
 # Constraint 4: Virtual access permission (nx_bits) is set to physical access permission (phy_nx) when executing from virtual page,
 # and unset when executing
-constraint12 = Implies(execute, And (nx_bits2(mmu1(va)) == phy_nx((mmu2(mmu1(va)))), (nx_bits2(mmu1(va)) == False)) )
+constraint13 = Implies(execute, (nx_bits2(mmu1(va)) == False))
+constraint14 = Implies(execute, (phy_nx((mmu2(mmu1(va)))) == False) )
+
+def basic_mapping(va_val):
+    s = Solver()
+    s.push()
+    # Add constraints to the solver
+    s.add(constraint0)
+    s.add(constraint1)
+    s.add(constraint2)
+    s.add(constraint3)
+    s.add(constraint4)
+    
+    s.add(va == BitVecVal(va_val, 32))
+    CheckSatResult = s.check()
+        
+    if CheckSatResult == sat:
+        m = s.model()
+        print("=== execute: ", m.evaluate(execute), " ===")
+        print("ro_bits: ", m.evaluate(ro_bits(va)))
+        print("phy_ro: ", m.evaluate(phy_ro(mmu2(mmu1(va)))))
+        print("nx_bits: ", m.evaluate(nx_bits(va)))
+        print("phy_nx: ", m.evaluate(phy_nx(mmu2(mmu1(va)))))
+
+    s.pop()
+    # Return True if the constraints are satisfiable for writable va, False otherwise
+    return CheckSatResult
+
+def alias_mapping(va1_val, va2_val):
+    s = Solver()
+    s.push()
+    # Add constraints to the solver
+    s.add(constraint0)
+    s.add(constraint1)
+    s.add(constraint2)
+    s.add(constraint3)
+    s.add(constraint4)
+    s.add(constraint5)
+    s.add(constraint6)
+    s.add(constraint7)
+    s.add(constraint8)
+    s.add(constraint9)
+    s.add(constraint10)
+    
+    s.add(va == BitVecVal(va1_val, 32))
+    s.add(va1 == BitVecVal(va2_val, 32))
+    CheckSatResult = s.check()
+        
+    if CheckSatResult == sat:
+        m = s.model()
+        print("=== execute: ", m.evaluate(execute), " ===")
+        print("ro_bits: ", m.evaluate(ro_bits(va)))
+        print("phy_ro: ", m.evaluate(phy_ro(mmu2(mmu1(va)))))
+        print("nx_bits: ", m.evaluate(nx_bits(va)))
+        print("phy_nx: ", m.evaluate(phy_nx(mmu2(mmu1(va)))))
+
+    s.pop()
+    # Return True if the constraints are satisfiable for writable va, False otherwise
+    return CheckSatResult
+    
+    
 
 def is_writable(va):
     s = Solver()
+    s.push()
     # Add constraints to the solver
     s.add(constraint0)
     s.add(constraint1)
@@ -90,26 +152,26 @@ def is_writable(va):
     s.add(constraint_wx)
 
     # Check if the constraints are satisfiable for the given va and write access
-    s.push()
     s.add(va == BitVecVal(va, 32))
     s.add(write == True)
     CheckSatResult = s.check()
         
     if CheckSatResult == sat:
         m = s.model()
-        print("=== write: ", m.evaluate(write), " ===")
+        print("=== execute: ", m.evaluate(execute), " ===")
         print("ro_bits: ", m.evaluate(ro_bits(va)))
-        print("phy_ro: ", m.evaluate(phy_ro(mmu1(va))))
+        print("phy_ro: ", m.evaluate(phy_ro(mmu2(mmu1(va)))))
         print("nx_bits: ", m.evaluate(nx_bits(va)))
-        print("phy_nx: ", m.evaluate(phy_nx(mmu1(va))))
+        print("phy_nx: ", m.evaluate(phy_nx(mmu2(mmu1(va)))))
 
     s.pop()
     # Return True if the constraints are satisfiable for writable va, False otherwise
-    return CheckSatResult == sat
+    return CheckSatResult
 
 
-def is_executable(va):
+def is_executable(va_val):
     s = Solver()
+    s.push()
     # Add constraints to the solver
     s.add(constraint0)
     s.add(constraint1)
@@ -122,13 +184,12 @@ def is_executable(va):
     s.add(constraint8)
     s.add(constraint9)
     s.add(constraint10)
-    s.add(constraint11)
-    s.add(constraint12)
+    s.add(constraint13)
+    s.add(constraint14)
     s.add(constraint_wx)
 
     # Check if the constraints are satisfiable for the given va and execute access
-    s.push()
-    s.add(va == BitVecVal(va, 32))
+    s.add(va == BitVecVal(va_val, 32))
     s.add(execute == True)
     CheckSatResult = s.check()
         
@@ -136,17 +197,18 @@ def is_executable(va):
         m = s.model()
         print("=== execute: ", m.evaluate(execute), " ===")
         print("ro_bits: ", m.evaluate(ro_bits(va)))
-        print("phy_ro: ", m.evaluate(phy_ro(mmu1(va))))
+        print("phy_ro: ", m.evaluate(phy_ro(mmu2(mmu1(va)))))
         print("nx_bits: ", m.evaluate(nx_bits(va)))
-        print("phy_nx: ", m.evaluate(phy_nx(mmu1(va))))
+        print("phy_nx: ", m.evaluate(phy_nx(mmu2(mmu1(va)))))
 
     s.pop()
     # Return True if the constraints are satisfiable for executable va, False otherwise
-    return CheckSatResult == sat
+    return CheckSatResult
 
 
-def is_alias_writable(va):
+def is_writable_and_executable(va_val):
     s = Solver()
+    s.push()
     # Add constraints to the solver
     s.add(constraint0)
     s.add(constraint1)
@@ -161,30 +223,34 @@ def is_alias_writable(va):
     s.add(constraint10)
     s.add(constraint11)
     s.add(constraint12)
+    s.add(constraint13)
+    s.add(constraint14)
     s.add(constraint_wx)
 
     # Check if the constraints are satisfiable for the given va and write access
+    s.add(va == BitVecVal(va_val, 32))
+    s.add(And (write == True), (execute == True))
+    CheckSatResult = s.check()
+        
+    if CheckSatResult == sat:
+        m = s.model()
+        print("=== execute: ", m.evaluate(execute), " ===")
+        print("ro_bits: ", m.evaluate(ro_bits(va)))
+        print("phy_ro: ", m.evaluate(phy_ro(mmu2(mmu1(va)))))
+        print("nx_bits: ", m.evaluate(nx_bits(va)))
+        print("phy_nx: ", m.evaluate(phy_nx(mmu2(mmu1(va)))))
+
+    s.pop()
+    # Return True if the constraints are satisfiable for writable va, False otherwise
+    return CheckSatResult
+
+def is_va_writable_but_alias_read_only(va_val, va1_val):
+    s = Solver()
     s.push()
-    s.add(va == BitVecVal(va, 32))
+    s.add(va == BitVecVal(va_val, 32))
+    s.add(va1 == BitVecVal(va1_val, 32))
     s.add(Distinct(ro_bits(va1), ro_bits(va)))
-    s.add(write == True)
-    CheckSatResult = s.check()
-        
-    if CheckSatResult == sat:
-        m = s.model()
-        print("=== write: ", m.evaluate(write), " ===")
-        print("ro_bits: ", m.evaluate(ro_bits(va)))
-        print("phy_ro: ", m.evaluate(phy_ro(mmu1(va))))
-        print("nx_bits: ", m.evaluate(nx_bits(va)))
-        print("phy_nx: ", m.evaluate(phy_nx(mmu1(va))))
-
-    s.pop()
-    # Return True if the constraints are satisfiable for writable va, False otherwise
-    return CheckSatResult == sat
-
-
-def is_alias_executable(va):
-    s = Solver()
+    
     # Add constraints to the solver
     s.add(constraint0)
     s.add(constraint1)
@@ -199,47 +265,91 @@ def is_alias_executable(va):
     s.add(constraint10)
     s.add(constraint11)
     s.add(constraint12)
+    s.add(constraint13)
+    s.add(constraint14)
     s.add(constraint_wx)
 
-    # Check if the constraints are satisfiable for the given va and execute access
-    s.push()
-    s.add(va == BitVecVal(va, 32))
-    s.add(execute == True)
-    s.add(Distinct(nx_bits(va1), nx_bits(va)))
+    # Check if the constraints are satisfiable for the given va and write access
+    s.add(write == True)
     CheckSatResult = s.check()
         
     if CheckSatResult == sat:
         m = s.model()
         print("=== execute: ", m.evaluate(execute), " ===")
         print("ro_bits: ", m.evaluate(ro_bits(va)))
-        print("phy_ro: ", m.evaluate(phy_ro(mmu1(va))))
+        print("ro_bits2: ", m.evaluate(ro_bits2(mmu1(va))))
+        print("phy_ro: ", m.evaluate(phy_ro(mmu2(mmu1(va)))))
         print("nx_bits: ", m.evaluate(nx_bits(va)))
-        print("phy_nx: ", m.evaluate(phy_nx(mmu1(va))))
+        print("phy_nx: ", m.evaluate(phy_nx(mmu2(mmu1(va)))))
+
+    s.pop()
+    # Return True if the constraints are satisfiable for writable va, False otherwise
+    return CheckSatResult
+
+
+def is_va_executable_but_alias_nx(va_val, va1_val):
+    s = Solver()
+    s.push()
+    
+    s.add(va == BitVecVal(va_val, 32))
+    s.add(va1 == BitVecVal(va1_val, 32))
+    s.add(Distinct(nx_bits(va1), nx_bits(va)))
+    
+    # Add constraints to the solver
+    s.add(constraint0)
+    s.add(constraint1)
+    s.add(constraint2)
+    s.add(constraint3)
+    s.add(constraint4)
+    s.add(constraint5)
+    s.add(constraint6)
+    s.add(constraint7)
+    s.add(constraint8)
+    s.add(constraint9)
+    s.add(constraint10)
+    s.add(constraint11)
+    s.add(constraint12)
+    s.add(constraint13)
+    s.add(constraint14)
+    s.add(constraint_wx)
+
+    # Check if the constraints are satisfiable for the given va and execute access
+    s.add(execute == True)
+    CheckSatResult = s.check()
+        
+    if CheckSatResult == sat:
+        m = s.model()
+        print("=== execute: ", m.evaluate(execute), " ===")
+        print("ro_bits: ", m.evaluate(ro_bits(va)))
+        print("phy_ro: ", m.evaluate(phy_ro(mmu2(mmu1(va)))))
+        print("nx_bits: ", m.evaluate(nx_bits(va)))
+        print("phy_nx: ", m.evaluate(phy_nx(mmu2(mmu1(va)))))
 
     s.pop()
     # Return True if the constraints are satisfiable for executable va, False otherwise
-    return CheckSatResult == sat
+    return CheckSatResult
 
 va_val = BitVecVal(0x12345000, 32).as_long()
+va1_val = BitVecVal(0x23456000, 32).as_long()
 
-if is_writable(va_val):
+if is_writable(va_val) == sat:
     print("==== write({}) satisfied ====".format(hex(va_val)))
 else:
     print("write({}) unsatisfied".format(hex(va_val)))
 
-if is_executable(va_val):
+if is_executable(va_val) == sat:
     print("==== execute({}) satisfied ====".format(hex(va_val)))
 else:
     print("execute({}) unsatisfied".format(hex(va_val)))
     
     
-if is_alias_writable(va_val):
-    print("==== alias write({}) satisfied ====".format(hex(va_val)))
+if is_va_writable_but_alias_read_only(va_val, va1_val) == sat:
+    print("==== va writable & alias read-only({}) satisfied ====".format(hex(va_val)))
 else:
     print("alias write({}) unsatisfied".format(hex(va_val)))
 
-if is_alias_executable(va_val):
-    print("==== alias execute({}) satisfied ====".format(hex(va_val)))
+if is_va_executable_but_alias_nx(va_val, va1_val) == sat:
+    print("==== va executable & alias nx({}) satisfied ====".format(hex(va_val)))
 else:
     print("alias execute({}) unsatisfied".format(hex(va_val)))
     

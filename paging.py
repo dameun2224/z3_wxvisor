@@ -33,18 +33,22 @@ constraint3 = ro_bits(va) == phy_ro(mmu1(va))
 constraint4 = nx_bits(va) == phy_nx(mmu1(va))
 
 
+def basic_mapping():
 # Create solver
-solver = Solver()
+    solver = Solver()
 
-# Add constraints to the solver
-solver.add(constraint0)
-solver.add(constraint1)
-solver.add(constraint2)
-solver.add(constraint3)
-solver.add(constraint4)
+    # Add constraints to the solver
+    solver.add(constraint0)
+    solver.add(constraint1)
+    solver.add(constraint2)
+    solver.add(constraint3)
+    solver.add(constraint4)
 
-# Check for satisfiability
-if solver.check() == sat:
-    print("satisfiable")
-else:
-    print("unsatisfiable")
+    # Check for satisfiability
+    retVal = solver.check()
+    if retVal == sat:
+        print("satisfiable")
+    else:
+        print("unsatisfiable")
+    
+    return retVal

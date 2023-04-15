@@ -49,27 +49,50 @@ constraint11 = ro_bits(va1) == phy_ro(mmu1(va1))
 constraint12 = Distinct(nx_bits(va), nx_bits(va2))
 constraint13 = nx_bits(va2) == phy_nx(mmu1(va2))
 
-# Create solver
-solver = Solver()
+def alias_mapping():
+    # Create solver
+    solver = Solver()
 
-# Add constraints to the solver
-solver.add(constraint0)
-solver.add(constraint1)
-solver.add(constraint2)
-solver.add(constraint3)
-solver.add(constraint4)
-solver.add(constraint5)
-solver.add(constraint6)
-solver.add(constraint7)
-solver.add(constraint8)
-solver.add(constraint9)
-solver.add(constraint10)
-solver.add(constraint11)
-solver.add(constraint12)
-solver.add(constraint13)
+    # Add constraints to the solver
+    solver.add(constraint0)
+    solver.add(constraint1)
+    solver.add(constraint2)
+    solver.add(constraint3)
+    solver.add(constraint4)
+    solver.add(constraint5)
+    solver.add(constraint6)
+    solver.add(constraint7)
+    solver.add(constraint8)
+    solver.add(constraint9)
+    solver.add(constraint10)
+    solver.add(constraint11)
+    solver.add(constraint12)
+    solver.add(constraint13)
 
-# Check for satisfiability
-if solver.check() == sat:
-    print("satisfiable")
-else:
-    print("unsatisfiable")
+    # Check for satisfiability
+    retVal = solver.check()
+    if retVal == sat:
+        print("satisfiable")
+    else:
+        print("unsatisfiable")
+        
+    return retVal
+
+def basic_mapping():
+    solver = Solver()
+    
+    # Add constraints to the solver
+    solver.add(constraint0)
+    solver.add(constraint1)
+    solver.add(constraint2)
+    solver.add(constraint3)
+    solver.add(constraint4)
+    
+    # Check for satisfiability
+    retVal = solver.check()
+    if retVal == sat:
+        print("satisfiable")
+    else:
+        print("unsatisfiable")
+        
+    return retVal
